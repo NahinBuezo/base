@@ -74,14 +74,15 @@ struct registro_ciudad{
 		codigo=x;
 	}
 };
-struct linea_telefonica{
+truct linea_telefonica{
+	char info[20];
 	int numero;
-	int id_cliente;
+	long long int id;
 	void setnumero(int x){
 		numero=x;
 	}
-	void setid(int x){
-		id_cliente=x;
+	void setid(long long int x){
+		id=x;
 	}
 };
 struct cabecera_cliente{
@@ -118,6 +119,10 @@ struct cabecera_ciudad{
 struct cabecera_linea{
 	char info[200];
 	void setinfo(string x){
+		for (int i = 0; i < 200; ++i)
+		{
+			info[i]=' ';
+		}
 		for (int i = 0; i < x.length(); ++i)
 		{
 			info[i]=x[i];
@@ -146,7 +151,7 @@ struct indice_ciudad{
 		posicion=x;
 	}
 };
-//*****************************************CLASE NODO******************************************************
+//*****************************************CLASE NODO PARA CLIENTE******************************************************
 class nodo_cliente{
 	indice_persona* keys;
 	int size;
@@ -159,8 +164,10 @@ public:
 	void insertNonFull(indice_persona indice);
 	void splitchild(int i, nodo_cliente *node);
 	void traverse();
-	nodo_cliente *buscar(indice_persona indice);
+	indice_persona getIndice(long long int indice);
+	nodo_cliente* buscar(long long int indice);
 	friend class btree_cliente;
+	friend class main;
 };
 //******************************************FIN CLASE NODO*************************************************
 //******************************************ARBOL B DE CLIENTES********************************************
@@ -177,7 +184,7 @@ public:
 			root->traverse();
 		}
 	}
-	nodo_cliente *buscar(indice_persona indice){
+	nodo_cliente* buscar(long long int indice){
 		return(root==NULL)? NULL : root->buscar(indice);
 	}
 	void insertar(indice_persona indice);
@@ -205,14 +212,14 @@ void nodo_cliente::traverse(){
 		c[i]->traverse();
 	}
 }//fin de traverse
-nodo_cliente *nodo_cliente::buscar(indice_persona indice){
+nodo_cliente *nodo_cliente::buscar(long long int indice){
 	int i=0;
 	indice_persona temp=keys[i];
-	while(i<n && indice.id > temp.id){
+	while(i<n && indice > temp.id){
 		temp=keys[i];
 		i++;
 	}
-	if(temp.id==indice.id)
+	if(temp.id==indice)
 		return this;
 
 	if(hoja==true)
@@ -220,6 +227,16 @@ nodo_cliente *nodo_cliente::buscar(indice_persona indice){
 
 	return c[i]->buscar(indice);
 }//fin funcion buscar
+indice_persona nodo_cliente::getIndice(long long int indice){
+	indice_persona correcta;
+	for (int h = 0; h < size; h++)
+	{
+		indice_persona temp=keys[h];
+		if(indice==temp.id)
+			correcta=keys[h];
+	}
+	return correcta;
+}
 
 void btree_cliente::insertar(indice_persona indice){
 	//si el arbol esta vacio
@@ -305,12 +322,181 @@ void nodo_cliente::splitchild(int i, nodo_cliente *y){
 	n=n+1;
 }//fin de metodo splitchild
 
+//:::::::::::::::::::::::::::::::::VAMOS CON ARBOL B PARA CIUDADES:::::::::::::::::::::::::::::::::::::::::
+class nodo_ciudad{
+	indice_ciudad* keys;
+	int size;
+	nodo_ciudad **c;
+	int n;
+	bool hoja;
+public:
+	nodo_ciudad(int size, bool hoja);
+	//void insertar(indice_persona);
+	void insertNonFull(indice_ciudad indice);
+	void splitchild(int i, nodo_ciudad *node);
+	void traverse();
+	indice_ciudad getIndice(int indice);
+	nodo_ciudad* buscar(int indice);
+	friend class btree_ciudad;
+	friend class main;
+};
+class btree_ciudad{
+	nodo_ciudad *root;
+	int minimum_degree;
+public:
+	btree_ciudad(int t){
+		root=NULL;
+		minimum_degree=t;
+	}
+	void traverse(){
+		if(root!=NULL){
+			root->traverse();
+		}
+	}
+	nodo_ciudad* buscar(int indice){
+		cout<<"Haber"<<endl;
+		return root->buscar(indice);
+	}
+	void insertar(indice_ciudad indice);
+};
+//constructor de la clase nodo de cliente
+nodo_ciudad::nodo_ciudad(int t, bool leaf){
+	size=t;
+	hoja=leaf;
+	keys=new indice_ciudad[2*size-1];
+	c=new nodo_ciudad *[2*size];
+	n=0;//numero de llaves
+	
+}//*************************FIN CONSTRUCTOR*******************************
+void nodo_ciudad::traverse(){
+	int i;
+	for (i = 0; i < n; i++){
+		if(hoja==false){
+			c[i]->traverse();
+			//cout<<" "<<keys[i]<<endl;
+		}
+	}
+	if(hoja==false){
+		c[i]->traverse();
+	}
+}//fin de traverse
+nodo_ciudad *nodo_ciudad::buscar(int indice){
+	int i=0;
+	indice_ciudad temp=keys[i];
+	while(i<n && indice > temp.id){
+		temp=keys[i];
+		i++;
+	}
+	if(temp.id==indice)
+		return this;
+
+	if(hoja==true)
+		return NULL;
+
+	return c[i]->buscar(indice);
+}//fin funcion buscar
+indice_ciudad nodo_ciudad::getIndice(int indice){
+	indice_ciudad correcta;
+	for (int h = 0; h < size; h++)
+	{
+		indice_ciudad temp=keys[h];
+		if(indice==temp.id)
+			correcta=keys[h];
+	}
+	return correcta;
+}
+
+void btree_ciudad::insertar(indice_ciudad indice){
+	//si el arbol esta vacio
+	if(root==NULL){
+		root=new nodo_ciudad(minimum_degree,true);
+		root->keys[0]=indice;
+		root->n=1;
+	}else{
+		if(root->n==2*minimum_degree-1){
+			nodo_ciudad *nuevo_nodo=new nodo_ciudad(minimum_degree, false);
+			nuevo_nodo->c[0]=root;
+			nuevo_nodo->splitchild(0, root);
+
+			int i=0;
+			indice_ciudad temp=nuevo_nodo->keys[0];
+			if(temp.id < indice.id){
+				i++;
+			}
+			nuevo_nodo->c[i]->insertNonFull(indice);
+			root=nuevo_nodo;
+		}else{
+			root->insertNonFull(indice);
+		}
+	}
+}//fin funcion insertar
+void nodo_ciudad::insertNonFull(indice_ciudad indice){
+	int i=n-1;	//inicilizamos la posicion con uno a la derecha
+	indice_ciudad temp=keys[i];
+	//se buscara la posicion para la nueva llave
+	//de ser necesaario de moveran las demas llaves
+	if(hoja==true){
+		while(i>=0 && temp.id > indice.id){
+			keys[i+1]=keys[i];
+			i--;
+		}
+		keys[i+1]=indice;
+		n=n+1;
+	}else{
+		while(i>=0 && temp.id > indice.id){
+			i--;
+		}
+		if(c[i+1]->n==2*size-1){
+			splitchild(i+1, c[i+1]);
+			temp=keys[i+1];
+			if(temp.id < indice.id){
+				i++;
+			}
+		}
+		c[i+1]->insertNonFull(indice);
+	}
+
+}//fin funcion insertNonFull
+void nodo_ciudad::splitchild(int i, nodo_ciudad *y){
+	nodo_ciudad *nuevo_nodo=new nodo_ciudad(y->size, y->hoja);
+	nuevo_nodo->n=size-1;
+
+	//se copia la ultima llave de y en nuevo_nodo
+	for (int j = 0; j < size-1; j++){
+		nuevo_nodo->keys[j]=y->keys[j+size];
+	}
+	if(y->hoja==false){
+		for (int j = 0; j < size; j++){
+			nuevo_nodo->c[j]=y->c[j+size];
+		}
+	}
+	//reducimos el numero de llaves en y
+	y->n=size-1;
+
+	//este nodo tendra nuevos hijo asi que tenemos que crear nuevo espacio
+	for (int j = n; j>= i+1; j--){
+		c[j+1]=c[j];		
+	}
+	//ahora enlazamos el nuevo hijo con este nodo
+	c[i+1]=nuevo_nodo;
+	//se movera una llave de este nodo asi que tenemos que mover una posicion a las demas llaves
+	for (int j = n-1; j>=i; j--){
+		keys[j+1]=keys[j];
+	}
+	//copiamos la llave en enmedio de y a este nodo
+	keys[i]=y->keys[size-1];
+	//aumentamos el numero de llaves de este nodo
+	n=n+1;
+}//fin de metodo splitchild
+//::::::::::::::::::::::::::::::::::::::FIN DEL ARBOL DE CIUDADES::::::::::::::::::::::::::::::::::::::::::
+
 //******************************************Main demas cosas***********************************************
 //Aqui estan las funciones para trabajar
 string regitro_temporal;
 vector<indice_persona>indice_clientes;
 vector<indice_ciudad>indice_ciudades;
 btree_cliente mytree(10);
+btree_ciudad tree_ciudad(5);
 void editar_cliente();
 void editar_ciudad();
 void agregar_cliente();
@@ -319,26 +505,31 @@ void eliminar_cliente();
 void eliminar_ciudad();
 void cargar_indice_cliente();
 void cargar_indice_ciudad();
-bool verificar_indice(long double,int);
-int busqueda_binaria(long double);
+bool verificar_indice(long long int,int);
+int busqueda_binaria(long long int);
+int busqueda_binaria_ciudad(int);
 void ordenar_indice_cliente();
 void intercambiar_indice_cliente(indice_persona,indice_persona,int,int);
 void ordenar_indice_ciudad();
-void intercambiar_indice_ciudad();
+void intercambiar_indice_ciudad(indice_ciudad,indice_ciudad,int,int);
 void listar_clientes();
+void listar_ciudades();
 vector<string> split(string,char );
+
+//:::::::::::::::::::::::::::::::::::::MAIN:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 int main(int argc,char** argv){
 	int opcion=1;
 	cout<<"Se cargara el indice de clientes"<<endl;
 	cargar_indice_cliente();
-	cout<<"Se cargo el indice de clientes"<<endl;
+	cout<<"Se cargara el indice de ciudades"<<endl;
+	cargar_indice_ciudad();
 	while(opcion>0){
 		cout<<"Menu Principal\n"<<"1. Clientes\n2. Ciudades\n3. Lineas\n0. Salir"<<endl;
 		cin>>opcion;
 		if(opcion==1){
 			int opcion_cliente=1;
 			while(opcion_cliente>0){
-				cout<<"Menu Cliente\n1. Agregar cliente\n2. Editar cliente\n3. Eliminar cliente\n4. Listar clientes\n0. Salir";
+				cout<<"Menu Cliente\n1. Agregar cliente\n2. Editar cliente\n3. Eliminar cliente\n4. Listar clientes\n5. Busqueda por arbol\n0. Salir";
 				cout<<endl;
 				cin>>opcion_cliente;
 				if(opcion_cliente==1){
@@ -353,11 +544,84 @@ int main(int argc,char** argv){
 				if(opcion_cliente==4){
 					listar_clientes();
 				}
+				if(opcion_cliente==5){
+					long long int id;
+					try{
+						cout<<"Ingrese la identidad del cliente: "<<endl;
+						cin>>id;
+						nodo_cliente *temporal=mytree.buscar(id);
+						if(temporal==NULL){
+							//cout<<"Indice no escontrado, intente de nuevo"<<endl;
+						}else{
+							indice_persona elegido=temporal->getIndice(id);
+							cout<<"Encontrado CLAVE: "<<elegido.id<<" RRN: "<<elegido.posicion<<endl;
+							int rrn=elegido.id;
+							fstream leer;
+							leer.open("./clientes.txt",ios::in|ios::out);
+							if(leer.is_open()){
+								char informacion[sizeof(registro_persona)];
+								leer.seekg((sizeof(cabecera_cliente)+(sizeof(registro_persona)*(rrn-1))));
+								leer.read(informacion,sizeof(registro_persona));
+								cout<<informacion<<endl;
+								leer.close();
+							}
+						}
+					}catch(...){
+						cout<<"SOLO INGRESE DIGITOS"<<endl;
+					}
+				}
+			}
+		}//fin opcion cliente
+		if(opcion==2){
+			int opcion_ciudad=1;
+			try{
+				while(opcion_ciudad!=0){
+					cout<<"Menu de ciudades\n1. Agregar ciudad\n2. Editar ciudad\n3. Eliminar ciudad\n4. Busqueda por arbol\n0. Salir"<<endl;
+					cin>>opcion_ciudad;
+					if(opcion_ciudad==1){
+						agregar_ciudad();
+					}
+					if(opcion_ciudad==2){
+						editar_ciudad();
+					}
+					if(opcion_ciudad==3){
+						eliminar_ciudad();
+					}
+					if(opcion_ciudad==4){
+						int id;
+						try{
+							cout<<"Ingrese el codigo de ciudad: "<<endl;
+							cin>>id;
+							nodo_ciudad *temporal=tree_ciudad.buscar(id);
+							if(temporal==NULL){
+								cout<<"Indice no escontrado, intente de nuevo"<<endl;
+							}else{
+								indice_ciudad elegido=temporal->getIndice(id);
+								cout<<"Encontrado CLAVE: "<<elegido.id<<" RRN: "<<elegido.posicion<<endl;
+								int rrn=elegido.id;
+								fstream leer;
+								leer.open("./cities.txt",ios::in|ios::out);
+								if(leer.is_open()){
+									char informacion[sizeof(registro_ciudad)];
+									leer.seekg((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(rrn-1))));
+									leer.read(informacion,sizeof(registro_ciudad));
+									cout<<informacion<<endl;
+									leer.close();
+								}
+							}
+						}catch(...){
+							cout<<"SOLO INGRESE DIGITOS"<<endl;
+						}
+					}
+				}
+			}catch(...){
+				cout<<"ERROR EN LA SELECCION DE MENU"<<endl;
 			}
 		}
 
 	}
 }//fin de main
+//::::::::::::::::::::::::::::::::::FIN MAIN::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 void cargar_indice_cliente(){
 	ifstream fichero("./indice_cliente.txt");
 	long long int llave;
@@ -408,7 +672,7 @@ void cargar_indice_cliente(){
 		for (int i = 0; i < indice_clientes.size(); ++i)
 		{
 			indice_persona t=indice_clientes.at(i);
-			cout<<t.id<<" "<<t.posicion<<endl;
+			//cout<<t.id<<" "<<t.posicion<<endl;
 		}
 
 	}
@@ -436,6 +700,7 @@ void cargar_indice_ciudad(){
 	            indice_ciudad temp;
 	            temp.setid(llave);
 	            temp.setpos(posicion);
+	            tree_ciudad.insertar(temp);
 	            indice_ciudades.push_back(temp);
 	        }
 	        fichero.close();
@@ -449,13 +714,17 @@ void cargar_indice_ciudad(){
 		 		string frase;
 	            getline (lectura,frase);
 	            vector<string>partes=split(frase,',');
-	            if(contador!=0){
-	            	string clave=partes.at(0);
-		            llave=atoi(clave.c_str());
-		            indice_ciudad temp;
-		            temp.setid(llave);
-		            temp.setpos(contador);
-		            indice_ciudades.push_back(temp);
+	            if(partes.size()>1){
+		            if(contador!=0){
+		            	string clave=partes.at(0);
+			            llave=atof(clave.c_str());
+			            indice_ciudad temp;
+			            temp.setid(llave);
+			            temp.setpos(contador);
+			            tree_ciudad.insertar(temp);
+			            indice_ciudades.push_back(temp);
+
+		        	}
 	        	}
 	        	contador++;
 	        }
@@ -470,7 +739,7 @@ void agregar_cliente(){
 	
 	try{
 		string header;
-		long double id;
+		long long int id;
 		string nombre;
 		string apellido;
 		string detalles="";
@@ -543,6 +812,7 @@ void agregar_cliente(){
 					nuevo_indice.setid(id);
 					nuevo_indice.setpos(indice_clientes.size());
 					indice_clientes.push_back(nuevo_indice);
+					mytree.insertar(nuevo_indice);
 					
 				}else{
 					int nuevo_espacio;
@@ -568,6 +838,7 @@ void agregar_cliente(){
 					nuevo_indice.setid(id);
 					nuevo_indice.setpos(pos);
 					indice_clientes.push_back(nuevo_indice);
+					mytree.insertar(nuevo_indice);
 				
 				}
 				ordenar_indice_cliente();
@@ -582,13 +853,13 @@ void agregar_cliente(){
 }
 void editar_cliente(){
 	string codigo;
-	long double clave;
+	long long int clave;
 	bool correcto=true;
 	string detalles="";
 	try{
 		cout<<"Ingrese la identidad del cliente a editar: "<<endl;
 		cin>>codigo;
-		clave=atof(codigo.c_str());
+		clave=atoll(codigo.c_str());
 		cout<<clave<<endl;
 		int pos=busqueda_binaria(clave);
 		cout<<"Resultado de busqueda_binaria "<<pos<<endl;
@@ -597,7 +868,7 @@ void editar_cliente(){
 			string apellido;
 			char sexo;
 			int edad;
-			long double id;
+			long long int id;
 			cout<<"Ingrese id del cliente: "<<endl;
 			cin>>id;
 			cout<<"Ingrese nombre del cliente: "<<endl;
@@ -673,7 +944,7 @@ void editar_cliente(){
 	}
 }
 void eliminar_cliente(){
-	long double clave;
+	long long int clave;
 	try{
 		cout<<"Ingrese el ID del cliente a borrar de la base de datos (13 digitos): "<<endl;
 		cin>>clave;
@@ -747,7 +1018,7 @@ void eliminar_cliente(){
 	}
 
 }//fin eliminado de cliente
-bool verificar_indice(long double llave,int tipo){
+bool verificar_indice(long long int llave,int tipo){
 	bool existe=false;
 	if(tipo==1){
 		for (int i = 0; i <indice_clientes.size(); ++i)
@@ -769,20 +1040,20 @@ bool verificar_indice(long double llave,int tipo){
 	return existe;
 }
 
-int busqueda_binaria(long double clave){
+int busqueda_binaria(long long int clave){
 	int Iarriba = indice_clientes.size()-1;
   	int Iabajo = 0;
   	int Icentro;
   	int valor=-1;
-  	for (int i = 0; i < indice_clientes.size(); ++i)
+  	/*for (int i = 0; i < indice_clientes.size(); ++i)
   	{
   		indice_persona temp=indice_clientes.at(i);
   		if (temp.id-clave==0){
  			valor= i;
  			cout<<valor<<endl;;
      	}
-  	}
-  	/*while (Iabajo <= Iarriba){
+  	}*/
+  	while (Iabajo <= Iarriba){
       	Icentro = (Iarriba + Iabajo)/2;
       	indice_persona temp=indice_clientes.at(Icentro);
       	if (temp.id == clave){
@@ -795,8 +1066,9 @@ int busqueda_binaria(long double clave){
    				Iabajo=Icentro+1;
  			}
       	}
-	}*/
-  	return valor;;
+
+	}
+	return valor;
 }
 void listar_clientes(){
 	ifstream leer("./clientes.txt");
@@ -840,4 +1112,275 @@ vector<string> split(string str, char delimiter) {
   }
   
   return internal;
+}
+
+//::::::::::::::::::::::::::FUNCIONES PARA CIUDADES:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+void agregar_ciudad(){
+
+	try{
+		string header;
+		int id;
+		string nombre;
+		string detalles="";
+		bool correcto=true;
+		cout<<"Ingrese codigo de la ciudad: "<<endl;
+		cin>>id;
+		cout<<"Ingrese nombre de la ciudad: "<<endl;
+		cin>>nombre;
+		if(correcto==false){
+			cout<<"---ERROR EN EL PROCESAMIENTO DE DATOS---\n"<<detalles<<endl;
+			cout<<"---------------FIN REPORTE DE ERROR-----------------"<<endl;
+		}else{
+			
+			ifstream fichero("./cities.txt");
+			getline(fichero,header);
+			fichero.close();
+			vector<string>elementos=split(header,',');
+			string numero=elementos.at(0);
+			int pos=atoi(numero.c_str());
+			registro_ciudad temp;
+			temp.setnombre(nombre);
+			temp.setcodigo(id);
+			char registro[sizeof(registro_ciudad)];
+			for (int i = 0; i < sizeof(registro_ciudad); ++i)
+			{
+				registro[i]=' ';
+			}
+			string regis="";
+			regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.codigo))->str();
+			regis+=",";
+			regis+=temp.nombre;
+			regis+=",";
+			//verificamos si la identidad ingresada no esta en index
+			if(!verificar_indice(id,2)){
+				for (int i = 0; i < regis.length(); ++i)
+				{
+					registro[i]=regis[i];
+				}
+				fstream editor;
+				if(pos==-1){
+					cout<<"No hay espacio en el avail list"<<endl;
+					editor.open("./cities.txt",std::ofstream::out | std::ofstream::app);
+					editor.write((char*)registro,sizeof(registro_ciudad));
+					editor.close();
+					indice_ciudad nuevo_indice;
+					nuevo_indice.setid(id);
+					nuevo_indice.setpos(indice_ciudades.size());
+					indice_ciudades.push_back(nuevo_indice);
+					tree_ciudad.insertar(nuevo_indice);
+					
+				}else{
+					int nuevo_espacio;
+					char refe[sizeof(registro_ciudad)];
+					editor.open("./cities.txt",ios::in|ios::out);
+					if(editor.is_open()){
+						editor.seekg((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(pos-1))));
+						editor.read(refe,sizeof(registro_ciudad));
+						char r=refe[0];
+						string posi="";
+						posi+=r;
+						nuevo_espacio=atoi(posi.c_str());
+
+					}
+					editor.close();
+					editor.open("./cities.txt",ios::out|ios::in);
+					if(editor.is_open()){
+						editor.seekp((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(pos-1))));
+						editor.write((char*)registro,sizeof(registro_ciudad));
+					}
+					editor.close();
+					indice_ciudad nuevo_indice;
+					nuevo_indice.setid(id);
+					nuevo_indice.setpos(pos);
+					indice_ciudades.push_back(nuevo_indice);
+					tree_ciudad.insertar(nuevo_indice);
+				
+				}
+				ordenar_indice_ciudad();
+				cout<<"---REGISTRO DE CIUDAD COMPLETADO CON EXITO---"<<endl;
+			}else{
+				cout<<"----EL ID INGRESADO YA EXISTE-----"<<endl;
+			}
+		}
+	}catch(...){
+		cout<<"---ERROR EN EL INGRESO DE DATOS---"<<endl;
+	}
+}
+void editar_ciudad(){
+	string codigo;
+	int clave;
+	bool correcto=true;
+	string detalles="";
+	try{
+		cout<<"Ingrese la identidad del cliente a editar: "<<endl;
+		cin>>codigo;
+		clave=atoi(codigo.c_str());
+		cout<<clave<<endl;
+		int pos=busqueda_binaria_ciudad(clave);
+		cout<<"Resultado de busqueda_binaria "<<pos<<endl;
+		if(pos!=-1){
+			string nombre;
+			int id;
+			cout<<"Ingrese codigo de la ciudad: "<<endl;
+			cin>>id;
+			cout<<"Ingrese nombre de la ciudad: "<<endl;
+			cin>>nombre;
+			if(correcto==false){
+				cout<<"---ERROR DE PROCESAMIENTO DE DATOS----\n"<<detalles<<endl;
+			}else{
+				indice_ciudad tempo=indice_ciudades.at(pos);
+				int rrn=tempo.posicion;
+				char refe[sizeof(registro_ciudad)];
+				//borramos el indice 
+				indice_ciudades.erase(indice_ciudades.begin()+pos);
+				registro_ciudad temp;
+				temp.setnombre(nombre);
+				temp.setcodigo(id);
+				char registro[sizeof(registro_ciudad)];
+				for (int i = 0; i < sizeof(registro_ciudad); ++i)
+				{
+					registro[i]=' ';
+				}
+				string regis="";
+				regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.codigo))->str();
+				regis+=",";
+				regis+=temp.nombre;
+				regis+=",";
+				if(!verificar_indice(id,2)){
+					for (int i = 0; i < regis.length(); ++i){
+						registro[i]=regis[i];
+					}
+					fstream editor;
+					editor.open("./cities.txt",ios::out|ios::in);
+					if(editor.is_open()){
+						editor.seekp((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(rrn-1))));
+						editor.write((char*)registro,sizeof(registro_ciudad));
+					}
+					editor.close();
+					indice_ciudad nuevo_indice;
+					nuevo_indice.setid(id);
+					nuevo_indice.setpos(rrn);
+					indice_ciudades.push_back(nuevo_indice);
+				}
+			}//fin else
+			cout<<"---EDITADO DE CIUDAD COMPLATADO EXITOSAMENTE---"<<endl;
+			ordenar_indice_ciudad();
+			
+		}else{
+			cout<<"***EL ID QUE UD INGRESO NO EXISTE EN EL SISTEMA***"<<endl;
+		}
+	}catch(...){
+		cout<<"---ERROR EN EL PROCESO DE EDITADO DE CIUDAD---"<<endl;
+	}
+}
+void eliminar_ciudad(){
+	int clave;
+	try{
+		cout<<"Ingrese el codigo de la ciudad a borrar: "<<endl;
+		cin>>clave;
+		int pos=busqueda_binaria_ciudad(clave);
+		if(pos==-1){
+			cout<<"---EL ID QUE UD INGRESO NO SE ENCUENTRA EN EL SISTEMA"<<endl;
+		}else{
+			indice_ciudad temp=indice_ciudades.at(pos);
+			int rrn=temp.posicion;
+			int antigua_posicion;
+			string info_cabecera="";
+			info_cabecera+=static_cast<std::ostringstream*>(&(std::ostringstream() << rrn))->str();
+			info_cabecera+=",Header_ciudad,";
+			info_cabecera+="registros,";
+			info_cabecera+= static_cast<std::ostringstream*>(&(std::ostringstream() << (indice_ciudades.size()-1)))->str();
+			info_cabecera+=",";
+			char nuevo_header[sizeof(cabecera_ciudad)];
+			for (int i = 0; i < sizeof(cabecera_ciudad); ++i)
+			{
+				 nuevo_header[i]=' ';
+			}
+			for (int i = 0; i < info_cabecera.length(); ++i)
+			{
+				nuevo_header[i]=info_cabecera[i];
+			}
+			//leeremos el header para extraer el numero de avail list y modificarlo
+			fstream editor;
+			editor.open("./cities.txt",ios::in|ios::out);
+			if(editor.is_open()){
+				string frase;
+				getline (editor,frase);
+				vector<string>elementos=split(frase,',');
+				string numero=elementos.at(0);
+				antigua_posicion=atoi(numero.c_str());
+				editor.close();
+			}
+			//actualizamos el header con los nuevos datos
+			editor.open("./cities.txt",ios::out|ios::in);
+			if(editor.is_open()){
+				editor.seekp(0,editor.beg);
+				editor.write((char*)nuevo_header,sizeof(cabecera_ciudad));
+				editor.close();
+			}
+			string eliminado="";
+			eliminado+="*,";
+			eliminado+=static_cast<std::ostringstream*>(&(std::ostringstream() << antigua_posicion))->str();
+			eliminado+=",";
+			char borrado[sizeof(registro_ciudad)];
+			for (int i = 0; i < sizeof(registro_ciudad); ++i)
+			{
+				borrado[i]='-';
+			}
+			for (int i = 0; i < eliminado.length(); ++i)
+			{
+				borrado[i]=eliminado[i];
+			}
+			editor.open("./cities.txt",ios::out|ios::in);
+			if(editor.is_open()){
+				editor.seekp((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(rrn-1))));
+				editor.write((char*)borrado,sizeof(registro_ciudad));
+				editor.close();
+			}
+			indice_ciudades.erase(indice_ciudades.begin()+pos);
+			ordenar_indice_ciudad();
+			cout<<"-----ELIMINADO DE CIUDAD COMPLETADO-----"<<endl;
+
+		}
+
+	}catch(...){
+		cout<<"***ERROR DE BUSQUEDA***"<<endl;
+	}
+}
+int busqueda_binaria_ciudad(int clave){
+	int Iarriba = indice_ciudades.size()-1;
+  	int Iabajo = 0;
+  	int Icentro;
+  	int valor=-1;
+  	while (Iabajo <= Iarriba){
+      	Icentro = (Iarriba + Iabajo)/2;
+      	indice_ciudad temp=indice_ciudades.at(Icentro);
+      	if (temp.id == clave){
+ 			valor= Icentro;
+ 			cout<<"Valor";
+     	}else{
+ 			if (clave < temp.id){
+   				Iarriba=Icentro-1;
+ 			}else{
+   				Iabajo=Icentro+1;
+ 			}
+      	}
+
+	}
+	return valor;
+}
+void ordenar_indice_ciudad(){
+	for (int i = 0; i< indice_ciudades.size()-1 ; i++){
+    	for (int j = 0; j< indice_ciudades.size()-1 ; j++){
+    		indice_ciudad temp=indice_ciudades.at(j);
+    		indice_ciudad temp2=indice_ciudades.at(j+1);
+      		if (temp.id > temp2.id){
+ 				intercambiar_indice_ciudad(temp,temp2,j,(j+1));
+      		}
+    	}
+	}
+}
+void intercambiar_indice_ciudad(indice_ciudad a,indice_ciudad b,int x,int y){
+	indice_ciudades[x]=b;
+	indice_ciudades[y]=a;
 }
