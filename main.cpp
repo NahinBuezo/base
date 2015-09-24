@@ -196,7 +196,7 @@ public:
 		}
 	}
 	nodo_cliente* buscar(long long int indice){
-		return(root==NULL)? NULL : root->buscar(indice);
+		return root->buscar(indice);
 	}
 	void insertar(indice_persona indice);
 };
@@ -1274,18 +1274,19 @@ void editar_cliente(){
 }
 void eliminar_cliente(){
 	long long int clave;
+	string cod;
 	try{
 		cout<<"Ingrese el ID del cliente a borrar de la base de datos (13 digitos): "<<endl;
-		cin>>clave;
+		cin>>cod;
+		clave=atoll(cod.c_str());
 		nodo_cliente *temporal=mytree.buscar(clave);
 		indice_persona elegido=temporal->getIndice(clave);
-		int rrn=elegido.id;
+		int rrn=elegido.posicion;
 		int pos=rrn;
 		if(pos==-1){
 			cout<<"---EL ID QUE UD INGRESO NO SE ENCUENTRA EN EL SISTEMA"<<endl;
 		}else{
-			indice_persona temp=indice_clientes.at(pos);
-			int rrn=temp.posicion;
+			
 			int antigua_posicion;
 			string info_cabecera="";
 			info_cabecera+=static_cast<std::ostringstream*>(&(std::ostringstream() << rrn))->str();
@@ -1294,6 +1295,7 @@ void eliminar_cliente(){
 			info_cabecera+= static_cast<std::ostringstream*>(&(std::ostringstream() << (indice_clientes.size()-1)))->str();
 			info_cabecera+=",";
 			char nuevo_header[sizeof(cabecera_cliente)];
+			cout<<"bien"<<endl;
 			for (int i = 0; i < sizeof(cabecera_cliente); ++i)
 			{
 				 nuevo_header[i]=' ';
@@ -1304,6 +1306,7 @@ void eliminar_cliente(){
 			}
 			//leeremos el header para extraer el numero de avail list y modificarlo
 			fstream editor;
+			cout<<"vamos bien"<<endl;
 			editor.open("./clientes.txt",ios::in|ios::out);
 			if(editor.is_open()){
 				string frase;
