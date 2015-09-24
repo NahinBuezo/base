@@ -370,7 +370,7 @@ public:
 	}
 	void insertar(indice_ciudad indice);
 };
-//constructor de la clase nodo de cliente
+//constructor de la clase nodo de ciudad
 nodo_ciudad::nodo_ciudad(int t, bool leaf){
 	size=t;
 	hoja=leaf;
@@ -501,6 +501,174 @@ void nodo_ciudad::splitchild(int i, nodo_ciudad *y){
 }//fin de metodo splitchild
 //::::::::::::::::::::::::::::::::::::::FIN DEL ARBOL DE CIUDADES::::::::::::::::::::::::::::::::::::::::::
 
+//::::::::::::::::::::::::::::::::::::::::::ARBOL DE LINEA TELEFONICA::::::::::::::::::::::::::::::::::::::
+class nodo_linea{
+	indice_linea* keys;
+	int size;
+	nodo_linea **c;
+	int n;
+	bool hoja;
+public:
+	nodo_linea(int size, bool hoja);
+	//void insertar(indice_persona);
+	void insertNonFull(indice_linea indice);
+	void splitchild(int i, nodo_linea *node);
+	void traverse();
+	indice_linea getIndice(int indice);
+	nodo_linea* buscar(int indice);
+	friend class btree_linea;
+	friend class main;
+};
+class btree_linea{
+	nodo_linea *root;
+	int minimum_degree;
+public:
+	btree_linea(int t){
+		root=NULL;
+		minimum_degree=t;
+	}
+	void traverse(){
+		if(root!=NULL){
+			root->traverse();
+		}
+	}
+	nodo_linea* buscar(int indice){
+		cout<<"Haber"<<endl;
+		return root->buscar(indice);
+	}
+	void insertar(indice_linea indice);
+};
+//constructor de la clase nodo de linea telefonica
+nodo_linea::nodo_linea(int t, bool leaf){
+	size=t;
+	hoja=leaf;
+	keys=new indice_linea[2*size-1];
+	c=new nodo_linea *[2*size];
+	n=0;//numero de llaves
+	
+}//*************************FIN CONSTRUCTOR*******************************
+void nodo_linea::traverse(){
+	int i;
+	for (i = 0; i < n; i++){
+		if(hoja==false){
+			c[i]->traverse();
+			//cout<<" "<<keys[i]<<endl;
+		}
+	}
+	if(hoja==false){
+		c[i]->traverse();
+	}
+}//fin de traverse
+nodo_linea *nodo_linea::buscar(int indice){
+	int i=0;
+	indice_linea temp=keys[i];
+	while(i<n && indice > temp.llave){
+		temp=keys[i];
+		i++;
+	}
+	if(temp.llave==indice)
+		return this;
+
+	if(hoja==true)
+		return NULL;
+
+	return c[i]->buscar(indice);
+}//fin funcion buscar
+indice_linea nodo_linea::getIndice(int indice){
+	indice_linea correcta;
+	for (int h = 0; h < size; h++)
+	{
+		indice_linea temp=keys[h];
+		if(indice==temp.llave)
+			correcta=keys[h];
+	}
+	return correcta;
+}
+
+void btree_linea::insertar(indice_linea indice){
+	//si el arbol esta vacio
+	if(root==NULL){
+		root=new nodo_linea(minimum_degree,true);
+		root->keys[0]=indice;
+		root->n=1;
+	}else{
+		if(root->n==2*minimum_degree-1){
+			nodo_linea *nuevo_nodo=new nodo_linea(minimum_degree, false);
+			nuevo_nodo->c[0]=root;
+			nuevo_nodo->splitchild(0, root);
+
+			int i=0;
+			indice_linea temp=nuevo_nodo->keys[0];
+			if(temp.llave < indice.llave){
+				i++;
+			}
+			nuevo_nodo->c[i]->insertNonFull(indice);
+			root=nuevo_nodo;
+		}else{
+			root->insertNonFull(indice);
+		}
+	}
+}//fin funcion insertar
+void nodo_linea::insertNonFull(indice_linea indice){
+	int i=n-1;	//inicilizamos la posicion con uno a la derecha
+	indice_linea temp=keys[i];
+	//se buscara la posicion para la nueva llave
+	//de ser necesaario de moveran las demas llaves
+	if(hoja==true){
+		while(i>=0 && temp.llave > indice.llave){
+			keys[i+1]=keys[i];
+			i--;
+		}
+		keys[i+1]=indice;
+		n=n+1;
+	}else{
+		while(i>=0 && temp.llave > indice.llave){
+			i--;
+		}
+		if(c[i+1]->n==2*size-1){
+			splitchild(i+1, c[i+1]);
+			temp=keys[i+1];
+			if(temp.llave < indice.llave){
+				i++;
+			}
+		}
+		c[i+1]->insertNonFull(indice);
+	}
+
+}//fin funcion insertNonFull
+void nodo_linea::splitchild(int i, nodo_linea *y){
+	nodo_linea *nuevo_nodo=new nodo_linea(y->size, y->hoja);
+	nuevo_nodo->n=size-1;
+
+	//se copia la ultima llave de y en nuevo_nodo
+	for (int j = 0; j < size-1; j++){
+		nuevo_nodo->keys[j]=y->keys[j+size];
+	}
+	if(y->hoja==false){
+		for (int j = 0; j < size; j++){
+			nuevo_nodo->c[j]=y->c[j+size];
+		}
+	}
+	//reducimos el numero de llaves en y
+	y->n=size-1;
+
+	//este nodo tendra nuevos hijo asi que tenemos que crear nuevo espacio
+	for (int j = n; j>= i+1; j--){
+		c[j+1]=c[j];		
+	}
+	//ahora enlazamos el nuevo hijo con este nodo
+	c[i+1]=nuevo_nodo;
+	//se movera una llave de este nodo asi que tenemos que mover una posicion a las demas llaves
+	for (int j = n-1; j>=i; j--){
+		keys[j+1]=keys[j];
+	}
+	//copiamos la llave en enmedio de y a este nodo
+	keys[i]=y->keys[size-1];
+	//aumentamos el numero de llaves de este nodo
+	n=n+1;
+}//fin de metodo splitchild
+//:::::::::::::::::::::::::::::::::::::::::::::::FIN DE ARBOL DE LINEA TELEFONICA:::::::::::::::::::::::::
+
 //******************************************Main demas cosas***********************************************
 //Aqui estan las funciones para trabajar
 string regitro_temporal;
@@ -509,6 +677,7 @@ vector<indice_ciudad>indice_ciudades;
 vector<indice_linea>indice_lineas;
 btree_cliente mytree(10);
 btree_ciudad tree_ciudad(5);
+btree_linea tree_linea(100);
 void editar_cliente();
 void editar_ciudad();
 void agregar_cliente();
@@ -517,7 +686,9 @@ void eliminar_cliente();
 void eliminar_ciudad();
 void cargar_indice_cliente();
 void cargar_indice_ciudad();
-bool verificar_indice(long long int,int);
+bool verificar_indice(long long int);
+bool verificar_indice_ciudad(int);
+bool verificar_indice_linea(int);
 int busqueda_binaria(long long int);
 int busqueda_binaria_ciudad(int);
 void ordenar_indice_cliente();
@@ -637,6 +808,48 @@ int main(int argc,char** argv){
 				}
 			}catch(...){
 				cout<<"ERROR EN LA SELECCION DE MENU"<<endl;
+			}
+		}//fin opcion de ciudad
+		if(opcion==3){
+			int opcion_linea=1;
+			while(opcion_linea!=0){
+				cout<<"Menu De Linea Telefonica\n1. Agregar linea\n2. Editar Linea\n3. Eliminar linea\n4. Busqueda de arbol\n0. salir"<<endl;
+				cin>>opcion_linea;
+				if(opcion_linea==1){
+					agregar_linea();
+				}
+				if(opcion_linea==2){
+					editar_linea();
+				}
+				if(opcion_linea==3){
+					eliminar_linea();
+				}
+				if(opcion_linea==4){
+					int id;
+					try{
+						cout<<"Ingrese el numero de la linea: "<<endl;
+						cin>>id;
+						nodo_linea *temporal=tree_linea.buscar(id);
+						if(temporal==NULL){
+							//cout<<"Indice no escontrado, intente de nuevo"<<endl;
+						}else{
+							indice_linea elegido=temporal->getIndice(id);
+							cout<<"Encontrado CLAVE: "<<elegido.llave<<" RRN: "<<elegido.rrn<<endl;
+							int rrn=elegido.rrn;
+							fstream leer;
+							leer.open("./lineas_telefonicas.txt",ios::in|ios::out);
+							if(leer.is_open()){
+								char informacion[sizeof(linea_telefonica)];
+								leer.seekg((sizeof(cabecera_linea)+(sizeof(linea_telefonica)*(rrn-1))));
+								leer.read(informacion,sizeof(linea_telefonica));
+								cout<<informacion<<endl;
+								leer.close();
+							}
+						}
+					}catch(...){
+						cout<<"SOLO INGRESE DIGITOS"<<endl;
+					}
+				}//fin opcion de linea
 			}
 		}
 
@@ -772,7 +985,7 @@ void cargar_indice_lineas(){
 	            indice_linea temp;
 	            temp.setllave(llave);
 	            temp.setrrn(posicion);
-	            //tree_ciudad.insertar(temp);
+	            tree_linea.insertar(temp);
 	            indice_lineas.push_back(temp);
 	    }
 	    fichero.close();
@@ -791,7 +1004,7 @@ void cargar_indice_lineas(){
 			            indice_linea temp;
 			            temp.setllave(llave);
 			            temp.setrrn(contador);
-			            //tree_ciudad.insertar(temp);
+			            tree_linea.insertar(temp);
 			            indice_lineas.push_back(temp);
 
 		        	}
@@ -867,7 +1080,7 @@ void agregar_cliente(){
 			regis+=",";
 			regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.edad))->str();
 			//verificamos si la identidad ingresada no esta en index
-			if(!verificar_indice(id,1)){
+			if(!verificar_indice(id)){
 				for (int i = 0; i < regis.length(); ++i)
 				{
 					registro[i]=regis[i];
@@ -883,6 +1096,23 @@ void agregar_cliente(){
 					nuevo_indice.setpos(indice_clientes.size());
 					indice_clientes.push_back(nuevo_indice);
 					mytree.insertar(nuevo_indice);
+					//hay que actualizar el header
+					string nuevo_header="-1,Header_cliente,numero_registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << indice_clientes.size()))->str();
+					nuevo_header+=",size de registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << sizeof(registro_persona)))->str();
+					char header_nuevo[sizeof(cabecera_cliente)];
+					for (int i = 0; i < sizeof(cabecera_cliente); ++i)
+					{
+						header_nuevo[i]=' ';
+					}
+					for (int i = 0; i < nuevo_header.length(); ++i)
+					{
+						header_nuevo[i]=nuevo_header[i];
+					}
+					editor.open("./clientes.txt",std::ofstream::out | std::ofstream::app);
+					editor.write((char*)header_nuevo,sizeof(cabecera_cliente));
+					editor.close();
 					
 				}else{
 					int nuevo_espacio;
@@ -892,17 +1122,40 @@ void agregar_cliente(){
 						editor.seekg((sizeof(cabecera_cliente)+(sizeof(registro_persona)*(pos-1))));
 						editor.read(refe,sizeof(registro_persona));
 						char r=refe[0];
-						string posi="";
-						posi+=r;
+						string base(refe);
+						vector<string>elementos=split(base, ',');
+						string posi=elementos.at(0);
 						nuevo_espacio=atoi(posi.c_str());
 
 					}
 					editor.close();
 					editor.open("./clientes.txt",ios::out|ios::in);
 					if(editor.is_open()){
-						editor.seekp((sizeof(cabecera_cliente)+(sizeof(registro_persona)*(pos-1))));
+						int length=(sizeof(cabecera_cliente)+(sizeof(registro_persona)*(pos-1)));
+						editor.seekp((length-sizeof(registro_persona)));
+						//editor<<endl;
 						editor.write((char*)registro,sizeof(registro_persona));
 					}
+
+					editor.close();
+					//hay que actualizar el header
+					string nuevo_header="";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << nuevo_espacio))->str();
+					nuevo_header+=",Header_cliente,numero_registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << indice_clientes.size()))->str();
+					nuevo_header+=",size de registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << sizeof(registro_persona)))->str();
+					char header_nuevo[sizeof(cabecera_cliente)];
+					for (int i = 0; i < sizeof(cabecera_cliente); ++i)
+					{
+						header_nuevo[i]=' ';
+					}
+					for (int i = 0; i < nuevo_header.length(); ++i)
+					{
+						header_nuevo[i]=nuevo_header[i];
+					}
+					editor.open("./clientes.txt",std::ofstream::out | std::ofstream::app);
+					editor.write((char*)header_nuevo,sizeof(cabecera_cliente));
 					editor.close();
 					indice_persona nuevo_indice;
 					nuevo_indice.setid(id);
@@ -926,13 +1179,17 @@ void editar_cliente(){
 	long long int clave;
 	bool correcto=true;
 	string detalles="";
+	long long int id;
+	int pos;//posicion en el archivo 
 	try{
 		cout<<"Ingrese la identidad del cliente a editar: "<<endl;
 		cin>>codigo;
 		clave=atoll(codigo.c_str());
 		cout<<clave<<endl;
-		int pos=busqueda_binaria(clave);
-		cout<<"Resultado de busqueda_binaria "<<pos<<endl;
+		nodo_cliente *temporal=mytree.buscar(id);
+		indice_persona elegido=temporal->getIndice(id);
+		int rrn=elegido.id;
+		pos=rrn;
 		if(pos!=-1){
 			string nombre;
 			string apellido;
@@ -986,14 +1243,16 @@ void editar_cliente(){
 				regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.sexo))->str();
 				regis+=",";
 				regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.edad))->str();
-				if(!verificar_indice(id,1)){
+				if(!verificar_indice(id)){
 					for (int i = 0; i < regis.length(); ++i){
 						registro[i]=regis[i];
 					}
 					fstream editor;
 					editor.open("./clientes.txt",ios::out|ios::in);
 					if(editor.is_open()){
-						editor.seekp((sizeof(cabecera_cliente)+(sizeof(registro_persona)*(rrn-1))));
+						int length=(sizeof(cabecera_cliente)+(sizeof(registro_persona)*(rrn-1)));
+						editor.seekp((length-sizeof(registro_persona)));
+						//editor<<endl;
 						editor.write((char*)registro,sizeof(registro_persona));
 					}
 					editor.close();
@@ -1018,7 +1277,10 @@ void eliminar_cliente(){
 	try{
 		cout<<"Ingrese el ID del cliente a borrar de la base de datos (13 digitos): "<<endl;
 		cin>>clave;
-		int pos=busqueda_binaria(clave);
+		nodo_cliente *temporal=mytree.buscar(clave);
+		indice_persona elegido=temporal->getIndice(clave);
+		int rrn=elegido.id;
+		int pos=rrn;
 		if(pos==-1){
 			cout<<"---EL ID QUE UD INGRESO NO SE ENCUENTRA EN EL SISTEMA"<<endl;
 		}else{
@@ -1088,23 +1350,33 @@ void eliminar_cliente(){
 	}
 
 }//fin eliminado de cliente
-bool verificar_indice(long long int llave,int tipo){
+bool verificar_indice(long long int llave){
 	bool existe=false;
-	if(tipo==1){
-		for (int i = 0; i <indice_clientes.size(); ++i)
-		{
-			indice_persona temp=indice_clientes.at(i);
-			if(temp.id==llave){
-				existe=true;
-			}
+	for (int i = 0; i <indice_clientes.size(); ++i){
+		indice_persona temp=indice_clientes.at(i);
+		if(temp.id==llave){
+			existe=true;
 		}
 	}
-	if(tipo==2){
-		for (int i = 0; i <indice_ciudades.size(); ++i){
-			indice_ciudad temp=indice_ciudades.at(i);
-			if(temp.id==llave){
-				existe=true;
-			}
+	
+	return existe;
+}
+bool verificar_indice_ciudad(int llave){
+	bool existe=false;
+	for (int i = 0; i <indice_ciudades.size(); ++i){
+		indice_ciudad temp=indice_ciudades.at(i);
+		if(temp.id==llave){
+			existe=true;
+		}
+	}
+	return existe;
+}
+bool verificar_indice_linea(int llave){
+	bool existe=false;
+	for (int i = 0; i <indice_lineas.size(); ++i){
+		indice_linea temp=indice_lineas.at(i);
+		if(temp.llave==llave){
+			existe=true;
 		}
 	}
 	return existe;
@@ -1222,7 +1494,7 @@ void agregar_ciudad(){
 			regis+=temp.nombre;
 			regis+=",";
 			//verificamos si la identidad ingresada no esta en index
-			if(!verificar_indice(id,2)){
+			if(!verificar_indice(id)){
 				for (int i = 0; i < regis.length(); ++i)
 				{
 					registro[i]=regis[i];
@@ -1238,7 +1510,24 @@ void agregar_ciudad(){
 					nuevo_indice.setpos(indice_ciudades.size());
 					indice_ciudades.push_back(nuevo_indice);
 					tree_ciudad.insertar(nuevo_indice);
-					
+
+					//hay que actualizar el header
+					string nuevo_header="-1,Header_ciudad,numero_registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << indice_ciudades.size()))->str();
+					nuevo_header+=",size de registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << sizeof(registro_ciudad)))->str();
+					char header_nuevo[sizeof(cabecera_ciudad)];
+					for (int i = 0; i < sizeof(cabecera_ciudad); ++i)
+					{
+						header_nuevo[i]=' ';
+					}
+					for (int i = 0; i < nuevo_header.length(); ++i)
+					{
+						header_nuevo[i]=nuevo_header[i];
+					}
+					editor.open("./clientes.txt",std::ofstream::out | std::ofstream::app);
+					editor.write((char*)header_nuevo,sizeof(cabecera_ciudad));
+					editor.close();
 				}else{
 					int nuevo_espacio;
 					char refe[sizeof(registro_ciudad)];
@@ -1247,18 +1536,41 @@ void agregar_ciudad(){
 						editor.seekg((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(pos-1))));
 						editor.read(refe,sizeof(registro_ciudad));
 						char r=refe[0];
-						string posi="";
-						posi+=r;
+						string base(refe);
+						vector<string>elementos=split(base,',');
+						string posi=elementos.at(0);
 						nuevo_espacio=atoi(posi.c_str());
 
 					}
 					editor.close();
 					editor.open("./cities.txt",ios::out|ios::in);
 					if(editor.is_open()){
-						editor.seekp((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(pos-1))));
+						int length=(sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(pos-1)));
+						editor.seekp((length-sizeof(registro_ciudad)));
+						//editor<<endl;
 						editor.write((char*)registro,sizeof(registro_ciudad));
 					}
 					editor.close();
+					//hay que actualizar el header
+					string nuevo_header="";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << nuevo_espacio))->str();
+					nuevo_header+=",Header_cliente,numero_registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << indice_ciudades.size()))->str();
+					nuevo_header+=",size de registro,";
+					nuevo_header+=static_cast<std::ostringstream*>(&(std::ostringstream() << sizeof(registro_ciudad)))->str();
+					char header_nuevo[sizeof(cabecera_ciudad)];
+					for (int i = 0; i < sizeof(cabecera_ciudad); ++i)
+					{
+						header_nuevo[i]=' ';
+					}
+					for (int i = 0; i < nuevo_header.length(); ++i)
+					{
+						header_nuevo[i]=nuevo_header[i];
+					}
+					editor.open("./clientes.txt",std::ofstream::out | std::ofstream::app);
+					editor.write((char*)header_nuevo,sizeof(cabecera_ciudad));
+					editor.close();
+			
 					indice_ciudad nuevo_indice;
 					nuevo_indice.setid(id);
 					nuevo_indice.setpos(pos);
@@ -1285,9 +1597,10 @@ void editar_ciudad(){
 		cout<<"Ingrese la identidad del cliente a editar: "<<endl;
 		cin>>codigo;
 		clave=atoi(codigo.c_str());
-		cout<<clave<<endl;
-		int pos=busqueda_binaria_ciudad(clave);
-		cout<<"Resultado de busqueda_binaria "<<pos<<endl;
+		nodo_ciudad *temporal=tree_ciudad.buscar(clave);
+		indice_ciudad elegido=temporal->getIndice(clave);
+		int rrn=elegido.id;
+		int pos=rrn;
 		if(pos!=-1){
 			string nombre;
 			int id;
@@ -1311,19 +1624,21 @@ void editar_ciudad(){
 				{
 					registro[i]=' ';
 				}
-				string regis="";
+				string regis="\n";
 				regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.codigo))->str();
 				regis+=",";
 				regis+=temp.nombre;
-				regis+=",";
-				if(!verificar_indice(id,2)){
+				//regis+=",";
+				if(!verificar_indice_ciudad(id)){
 					for (int i = 0; i < regis.length(); ++i){
 						registro[i]=regis[i];
 					}
 					fstream editor;
 					editor.open("./cities.txt",ios::out|ios::in);
 					if(editor.is_open()){
-						editor.seekp((sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(rrn-1))));
+						int length=(sizeof(cabecera_ciudad)+(sizeof(registro_ciudad)*(rrn-1)));
+						editor.seekp((length-sizeof(registro_ciudad)));
+						//editor<<endl;
 						editor.write((char*)registro,sizeof(registro_ciudad));
 					}
 					editor.close();
@@ -1348,7 +1663,10 @@ void eliminar_ciudad(){
 	try{
 		cout<<"Ingrese el codigo de la ciudad a borrar: "<<endl;
 		cin>>clave;
-		int pos=busqueda_binaria_ciudad(clave);
+		nodo_ciudad *temporal=tree_ciudad.buscar(clave);
+		indice_ciudad elegido=temporal->getIndice(clave);
+		int rrn=elegido.id;
+		int pos=rrn;
 		if(pos==-1){
 			cout<<"---EL ID QUE UD INGRESO NO SE ENCUENTRA EN EL SISTEMA"<<endl;
 		}else{
@@ -1427,7 +1745,7 @@ int busqueda_binaria_ciudad(int clave){
       	indice_ciudad temp=indice_ciudades.at(Icentro);
       	if (temp.id == clave){
  			valor= Icentro;
- 			cout<<"Valor";
+ 			
      	}else{
  			if (clave < temp.id){
    				Iarriba=Icentro-1;
@@ -1491,7 +1809,7 @@ void agregar_linea(){
 			regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.id))->str();
 			regis+=",";
 			//verificamos si la identidad ingresada no esta en index
-			if(!verificar_indice(id,3)){
+			if(!verificar_indice_linea(id)){
 				for (int i = 0; i < regis.length(); ++i)
 				{
 					registro[i]=regis[i];
@@ -1506,7 +1824,7 @@ void agregar_linea(){
 					nuevo_indice.setllave(id);
 					nuevo_indice.setrrn(indice_lineas.size());
 					indice_lineas.push_back(nuevo_indice);
-					//tree_ciudad.insertar(nuevo_indice);
+					tree_linea.insertar(nuevo_indice);
 					
 				}else{
 					int nuevo_espacio;
@@ -1516,15 +1834,18 @@ void agregar_linea(){
 						editor.seekg((sizeof(cabecera_linea)+(sizeof(linea_telefonica)*(pos-1))));
 						editor.read(refe,sizeof(linea_telefonica));
 						char r=refe[0];
-						string posi="";
-						posi+=r;
-						nuevo_espacio=atoi(posi.c_str());
+						string posi(refe);
+						vector<string>elementos=split(posi,',');
+						string espacio=elementos.at(0);
+						nuevo_espacio=atoi(espacio.c_str());
 
 					}
 					editor.close();
 					editor.open("./lineas_telefonicas.txt",ios::out|ios::in);
 					if(editor.is_open()){
-						editor.seekp((sizeof(cabecera_linea)+(sizeof(linea_telefonica)*(pos-1))));
+						int length=(sizeof(cabecera_linea)+(sizeof(linea_telefonica)*(pos-1)));
+						editor.seekp((length-sizeof(linea_telefonica)));
+						//editor<<endl;
 						editor.write((char*)registro,sizeof(linea_telefonica));
 					}
 					editor.close();
@@ -1532,7 +1853,7 @@ void agregar_linea(){
 					nuevo_indice.setllave(id);
 					nuevo_indice.setrrn(pos);
 					indice_lineas.push_back(nuevo_indice);
-					//tree_ciudad.insertar(nuevo_indice);
+					tree_linea.insertar(nuevo_indice);
 				
 				}
 				ordenar_indice_linea();
@@ -1555,9 +1876,10 @@ void editar_linea(){
 		cout<<"Ingrese el numero de la linea a editar: "<<endl;
 		cin>>codigo;
 		clave=atoi(codigo.c_str());
-		//cout<<clave<<endl;
-		int pos=busqueda_binaria_linea(clave);
-		cout<<"Resultado de busqueda_binaria "<<pos<<endl;
+		nodo_linea *temporal=tree_linea.buscar(clave);
+		indice_linea elegido=temporal->getIndice(clave);
+		int rrn=elegido.rrn;
+		int pos=rrn;
 		if(pos!=-1){
 			int numero;
 			int id;
@@ -1586,14 +1908,16 @@ void editar_linea(){
 				regis+=",";
 				regis+=static_cast<std::ostringstream*>(&(std::ostringstream() << temp.id))->str();
 				regis+=",";
-				if(!verificar_indice(id,2)){
+				if(!verificar_indice_linea(id)){
 					for (int i = 0; i < regis.length(); ++i){
 						registro[i]=regis[i];
 					}
 					fstream editor;
 					editor.open("./lineas_telefonicas.txt",ios::out|ios::in);
 					if(editor.is_open()){
-						editor.seekp((sizeof(cabecera_linea)+(sizeof(linea_telefonica)*(rrn-1))));
+						int length=(sizeof(cabecera_linea)+(sizeof(linea_telefonica)*(rrn-1)));
+						editor.seekp((length-sizeof(linea_telefonica)));
+						//editor<<endl;
 						editor.write((char*)registro,sizeof(linea_telefonica));
 					}
 					editor.close();
@@ -1616,9 +1940,12 @@ void editar_linea(){
 void eliminar_linea(){
 	int clave;
 	try{
-		cout<<"Ingrese el codigo de la ciudad a borrar: "<<endl;
+		cout<<"Ingrese el numero telefonico de la linea a borrar: "<<endl;
 		cin>>clave;
-		int pos=busqueda_binaria_linea(clave);
+		nodo_linea *temporal=tree_linea.buscar(clave);
+		indice_linea elegido=temporal->getIndice(clave);
+		int rrn=elegido.rrn;
+		int pos=rrn;
 		if(pos==-1){
 			cout<<"---EL ID QUE UD INGRESO NO SE ENCUENTRA EN EL SISTEMA"<<endl;
 		}else{
